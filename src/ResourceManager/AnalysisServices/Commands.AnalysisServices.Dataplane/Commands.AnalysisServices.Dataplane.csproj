@@ -84,6 +84,7 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Commands\AddAzureASAccount.cs" />
+    <Compile Include="Commands\FetchLog-AzureAsInstance.cs" />
     <Compile Include="Models\AsAzureAccount.cs" />
     <Compile Include="Models\AsAzureClientSession.cs" />
     <Compile Include="Models\ASAzureContext.cs" />
