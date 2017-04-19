@@ -24,16 +24,17 @@ using Microsoft.Azure.Commands.AnalysisServices.Dataplane.Properties;
 using Microsoft.Azure.Commands.Common.Authentication.Models;
 using Microsoft.IdentityModel.Clients.ActiveDirectory;
 using Microsoft.WindowsAzure.Commands.Utilities.Common;
+using Newtonsoft.Json.Linq;
 
 namespace Microsoft.Azure.Commands.AnalysisServices.Dataplane
 {
     /// <summary>
     /// Cmdlet to log into an Analysis Services environment
     /// </summary>
-    [Cmdlet("FetchLog", "AzureAnalysisServicesInstance", SupportsShouldProcess = true)]
-    [Alias("FetchLog-AzureAsInstance")]
+    [Cmdlet("Get", "AzureAnalysisServicesInstanceLog", SupportsShouldProcess = true)]
+    [Alias("Get-AzureAsInstanceLog")]
     [OutputType(typeof(bool))]
-    public class FetchLogAzureAnalysisServer : AzurePSCmdlet
+    public class GetAzureAnalysisServerLog : AzurePSCmdlet
     {
         private string serverName;
 
@@ -48,14 +49,13 @@ namespace Microsoft.Azure.Commands.AnalysisServices.Dataplane
 
         public ITokenCacheItemProvider TokenCacheItemProvider { get; private set; }
 
-        public FetchLogAzureAnalysisServer()
+        public GetAzureAnalysisServerLog()
         {
             this.AsAzureHttpClient = new AsAzureHttpClient(() => new HttpClient());
             this.TokenCacheItemProvider = new TokenCacheItemProvider();
-
         }
 
-        public FetchLogAzureAnalysisServer(IAsAzureHttpClient AsAzureHttpClient, ITokenCacheItemProvider TokenCacheItemProvider)
+        public GetAzureAnalysisServerLog(IAsAzureHttpClient AsAzureHttpClient, ITokenCacheItemProvider TokenCacheItemProvider)
         {
             this.AsAzureHttpClient = AsAzureHttpClient;
             this.TokenCacheItemProvider = TokenCacheItemProvider;
@@ -143,19 +143,40 @@ namespace Microsoft.Azure.Commands.AnalysisServices.Dataplane
 
                 Uri logfileBaseUri = new Uri(string.Format("{0}{1}{2}", Uri.UriSchemeHttps, Uri.SchemeDelimiter, context.Environment.Name));
 
+                UriBuilder resolvedUriBuilder = new UriBuilder(logfileBaseUri);
+                resolvedUriBuilder.Host = ClusterResolve(logfileBaseUri, accessToken, serverName);
+                
                 var logfileEndpoint = string.Format((string)context.Environment.Endpoints[AsAzureEnvironment.AsRolloutEndpoints.LogfileEndpointFormat], serverName);
 
-                using (HttpResponseMessage message = AsAzureHttpClient.CallPostAsync(
-                    logfileBaseUri,
+                this.AsAzureHttpClient = new AsAzureHttpClient(() => new HttpClient());
+                using (HttpResponseMessage message = AsAzureHttpClient.CallGetAsync(
+                    resolvedUriBuilder.Uri,
                     logfileEndpoint,
                     accessToken).Result)
                 {
                     message.EnsureSuccessStatusCode();
-                    if (PassThru.IsPresent)
-                    {
-                        WriteObject(message.Content.ReadAsStringAsync().Result);
-                    }
+                    Console.WriteLine(message.Content.ReadAsStringAsync().Result);
                 }
+            }
+        }
+
+        private string ClusterResolve(Uri clusterUri, string accessToken, string serverName)
+        {
+            var resolveEndpoint = "/webapi/clusterResolve";
+            var content = new StringContent($"ServerName={serverName}");
+            content.Headers.ContentType = MediaTypeHeaderValue.Parse("application/x-www-form-urlencoded");
+            
+            using (HttpResponseMessage message = AsAzureHttpClient.CallPostAsync(
+                clusterUri,
+                resolveEndpoint,
+                accessToken,
+                content).Result)
+            {
+                message.EnsureSuccessStatusCode();
+                var rawResult = message.Content.ReadAsStringAsync().Result;
+                Console.WriteLine(rawResult);
+                var jsonResult = JObject.Parse(rawResult);
+                return jsonResult["clusterFQDN"].ToString();
             }
         }
     }

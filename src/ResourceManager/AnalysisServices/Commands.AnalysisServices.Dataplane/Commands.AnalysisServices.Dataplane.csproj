@@ -84,7 +84,7 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Commands\AddAzureASAccount.cs" />
-    <Compile Include="Commands\FetchLog-AzureAsInstance.cs" />
+    <Compile Include="Commands\Get-AzureAsInstanceLog.cs" />
     <Compile Include="Models\AsAzureAccount.cs" />
     <Compile Include="Models\AsAzureClientSession.cs" />
     <Compile Include="Models\ASAzureContext.cs" />
@@ -132,4 +132,7 @@
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <Import Project="$(SolutionDir)\.nuget\NuGet.targets" Condition="Exists('$(SolutionDir)\.nuget\NuGet.targets')" />
+  <Target Name="AfterBuild">
+    <Copy SourceFiles="..\..\..\packages\Newtonsoft.Json.6.0.8\lib\net45\Newtonsoft.Json.dll" DestinationFolder="$(OutputPath)" ContinueOnError="false" />
+  </Target>
 </Project>
