@@ -174,7 +174,6 @@ namespace Microsoft.Azure.Commands.AnalysisServices.Dataplane
             {
                 message.EnsureSuccessStatusCode();
                 var rawResult = message.Content.ReadAsStringAsync().Result;
-                Console.WriteLine(rawResult);
                 var jsonResult = JObject.Parse(rawResult);
                 return jsonResult["clusterFQDN"].ToString();
             }
